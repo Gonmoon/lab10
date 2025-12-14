@@ -6,7 +6,7 @@ const { buildListQueryParams } = require('./utils');
 
 const router = express.Router();
 
-// Создать получателя
+// Создать
 router.post('/', async (req, res, next) => {
   try {
     const recipient = await Recipient.create(req.body);
@@ -19,12 +19,12 @@ router.post('/', async (req, res, next) => {
 // Список
 router.get('/', async (req, res, next) => {
   try {
-    const { filter, numericPage, numericLimit, skip, sortBy } =
+    const { filter, numericPage, numericLimit, skip, sortObj } =
       buildListQueryParams(req, ['fullName', 'street', 'code']);
 
     const total = await Recipient.countDocuments(filter);
     const data = await Recipient.find(filter)
-      .sort(sortBy)
+      .sort(sortObj)
       .skip(skip)
       .limit(numericLimit);
 
@@ -46,9 +46,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', validateObjectId, async (req, res, next) => {
   try {
     const recipient = await Recipient.findById(req.params.id);
-    if (!recipient) {
-      return res.status(404).json({ message: 'Получатель не найден' });
-    }
+    if (!recipient) return res.status(404).json({ message: 'Получатель не найден' });
     res.json(recipient);
   } catch (err) {
     next(err);
@@ -58,33 +56,24 @@ router.get('/:id', validateObjectId, async (req, res, next) => {
 // Обновить
 router.put('/:id', validateObjectId, async (req, res, next) => {
   try {
-    const recipient = await Recipient.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
-    if (!recipient) {
-      return res.status(404).json({ message: 'Получатель не найден' });
-    }
+    const recipient = await Recipient.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!recipient) return res.status(404).json({ message: 'Получатель не найден' });
     res.json(recipient);
   } catch (err) {
     next(err);
   }
 });
 
-// Удалить (с проверкой подписок)
+// Удалить
 router.delete('/:id', validateObjectId, async (req, res, next) => {
   try {
     const hasSubscriptions = await Subscription.exists({ recipient: req.params.id });
     if (hasSubscriptions) {
-      return res
-        .status(409)
-        .json({ message: 'Нельзя удалить получателя: у него есть подписки' });
+      return res.status(409).json({ message: 'Нельзя удалить получателя: у него есть подписки' });
     }
 
     const recipient = await Recipient.findByIdAndDelete(req.params.id);
-    if (!recipient) {
-      return res.status(404).json({ message: 'Получатель не найден' });
-    }
+    if (!recipient) return res.status(404).json({ message: 'Получатель не найден' });
 
     res.json({ message: 'Получатель удалён' });
   } catch (err) {

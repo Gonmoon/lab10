@@ -5,7 +5,7 @@ const { buildListQueryParams } = require('./utils');
 
 const router = express.Router();
 
-// Создать издание
+// Создать
 router.post('/', async (req, res, next) => {
   try {
     const edition = await Edition.create(req.body);
@@ -15,15 +15,16 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// Список с пагинацией/сортировкой/фильтрацией/поиском
+// Список
 router.get('/', async (req, res, next) => {
   try {
-    const { filter, numericPage, numericLimit, skip, sortBy } =
-      buildListQueryParams(req, ['title', 'index', 'type']);
+    // Везде sort, а не sortBy
+    const { filter, numericPage, numericLimit, skip, sortObj } =
+      buildListQueryParams(req, ['title', 'type', 'index']);
 
     const total = await Edition.countDocuments(filter);
     const data = await Edition.find(filter)
-      .sort(sortBy)
+      .sort(sortObj)
       .skip(skip)
       .limit(numericLimit);
 
@@ -41,13 +42,11 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// Детально по id
+// Детально
 router.get('/:id', validateObjectId, async (req, res, next) => {
   try {
     const edition = await Edition.findById(req.params.id);
-    if (!edition) {
-      return res.status(404).json({ message: 'Издание не найдено' });
-    }
+    if (!edition) return res.status(404).json({ message: 'Издание не найдено' });
     res.json(edition);
   } catch (err) {
     next(err);
@@ -57,24 +56,20 @@ router.get('/:id', validateObjectId, async (req, res, next) => {
 // Обновить
 router.put('/:id', validateObjectId, async (req, res, next) => {
   try {
-    const edition = await Edition.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
-    if (!edition) {
-      return res.status(404).json({ message: 'Издание не найдено' });
-    }
+    const edition = await Edition.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!edition) return res.status(404).json({ message: 'Издание не найдено' });
     res.json(edition);
   } catch (err) {
     next(err);
   }
 });
 
-// Проверить существование
-router.get('/:id/exists', validateObjectId, async (req, res, next) => {
+// Удалить
+router.delete('/:id', validateObjectId, async (req, res, next) => {
   try {
-    const exists = await Edition.exists({ _id: req.params.id });
-    res.json({ exists: !!exists });
+    const edition = await Edition.findByIdAndDelete(req.params.id);
+    if (!edition) return res.status(404).json({ message: 'Издание не найдено' });
+    res.json({ message: 'Издание удалено' });
   } catch (err) {
     next(err);
   }
